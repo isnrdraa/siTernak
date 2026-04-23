@@ -1,0 +1,27 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Cage;
+use App\Models\MortalityLog;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<MortalityLog>
+ */
+class MortalityLogFactory extends Factory
+{
+    public function definition(): array
+    {
+        return [
+            'tenant_id' => Tenant::factory(),
+            'cage_id' => Cage::factory(),
+            'date' => fake()->dateTimeBetween('-30 days'),
+            'count' => fake()->numberBetween(1, 20),
+            'cause' => fake()->randomElement(['Disease', 'Natural', 'Predator', 'Heat Stress', 'Unknown']),
+            'recorded_by' => User::factory(),
+        ];
+    }
+}
