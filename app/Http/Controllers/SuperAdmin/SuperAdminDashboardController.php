@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cage;
-use App\Models\DailyProduction;
-use App\Models\MortalityLog;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -20,16 +17,10 @@ class SuperAdminDashboardController extends Controller
             'active_tenants' => Tenant::where('status', 'active')->count(),
             'suspended_tenants' => Tenant::where('status', 'suspended')->count(),
             'total_users' => User::where('is_super_admin', false)->count(),
-            'total_ternak' => Cage::withoutGlobalScopes()->sum('current_count'),
-            'today_production' => DailyProduction::withoutGlobalScopes()->whereDate('date', today())->count(),
-            'today_mortality' => MortalityLog::withoutGlobalScopes()->whereDate('date', today())->sum('count'),
+            'new_tenants_this_month' => Tenant::where('created_at', '>=', now()->startOfMonth())->count(),
+            'new_users_this_month' => User::where('is_super_admin', false)
+                ->where('created_at', '>=', now()->startOfMonth())->count(),
         ];
-
-        $topTenants = Tenant::withCount('users')
-            ->withCount(['dailyProductions as total_records' => fn ($q) => $q->withoutGlobalScopes()->whereBetween('date', [now()->subDays(6), today()])])
-            ->orderByDesc('total_records')
-            ->limit(5)
-            ->get();
 
         $recentTenants = Tenant::withCount('users')
             ->orderByDesc('created_at')
@@ -45,6 +36,35 @@ class SuperAdminDashboardController extends Controller
             ->orderBy('d')
             ->pluck('total', 'd');
 
-        return view('super-admin.dashboard', compact('stats', 'topTenants', 'recentTenants', 'tenantGrowth'));
+        $userGrowth = User::select(
+            DB::raw('DATE(created_at) as d'),
+            DB::raw('COUNT(*) as total')
+        )
+            ->where('is_super_admin', false)
+            ->where('created_at', '>=', now()->subDays(29))
+            ->groupBy('d')
+            ->orderBy('d')
+            ->pluck('total', 'd');
+
+        $tenantsByStatus = [
+            'active' => $stats['active_tenants'],
+            'suspended' => $stats['suspended_tenants'],
+            'inactive' => Tenant::where('status', 'inactive')->count(),
+        ];
+
+        $topTenantsByUsers = Tenant::withCount('users')
+            ->where('status', 'active')
+            ->orderByDesc('users_count')
+            ->limit(5)
+            ->get();
+
+        return view('super-admin.dashboard', compact(
+            'stats',
+            'recentTenants',
+            'tenantGrowth',
+            'userGrowth',
+            'tenantsByStatus',
+            'topTenantsByUsers',
+        ));
     }
 }

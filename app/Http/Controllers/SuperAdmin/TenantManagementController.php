@@ -4,8 +4,6 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\TenantStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Cage;
-use App\Models\DailyProduction;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,13 +29,7 @@ class TenantManagementController extends Controller
 
         $members = $tenant->users()->withPivot('joined_at')->get();
 
-        $stats = [
-            'total_ternak' => Cage::withoutGlobalScopes()->where('tenant_id', $tenant->id)->sum('current_count'),
-            'total_production' => DailyProduction::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count(),
-            'last_activity' => DailyProduction::withoutGlobalScopes()->where('tenant_id', $tenant->id)->max('created_at'),
-        ];
-
-        return view('super-admin.tenants.show', compact('tenant', 'members', 'stats'));
+        return view('super-admin.tenants.show', compact('tenant', 'members'));
     }
 
     public function suspend(Tenant $tenant): RedirectResponse
